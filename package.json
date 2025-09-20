@@ -13,15 +13,22 @@
     "lint": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@kq_npm/client_common_vue": "^9.2.64",
+    "@kq_npm/client_leaflet_vue": "^9.1.45",
     "@vueuse/core": "^11.0.0",
     "axios": "^1.11.0",
+    "cesium": "~1.86.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "echarts": "^6.0.0",
+    "jquery": "^3.7.1",
+    "leaflet": "^1.9.4",
+    "lightbox2": "^2.11.5",
     "lucide-vue-next": "^0.525.0",
     "pinia": "^2.1.7",
     "qrcode": "^1.5.4",
+    "vite-plugin-cesium": "^1.2.23",
     "vue": "^3.5.18",
     "zod": "^3.24.3"
   },

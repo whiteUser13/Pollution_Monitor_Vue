@@ -1,15 +1,21 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import type { MonitoringPoint, MonitoringData, WorkOrder, StatisticsData } from '@/types/types'
+import { defineStore } from "pinia"
+import { ref } from "vue"
+import type {
+  MonitoringPoint,
+  MonitoringData,
+  WorkOrder,
+  StatisticsData,
+} from "@/types/types"
+import axios from "axios"
 
-export const useMonitoringStore = defineStore('monitoring', () => {
+export const useMonitoringStore = defineStore("monitoring", () => {
   // 状态
   const monitoringPoints = ref<MonitoringPoint[]>([])
   const alertData = ref<MonitoringData[]>([])
   const workOrders = ref<WorkOrder[]>([])
   const statistics = ref<StatisticsData | null>(null)
   const loading = ref(false)
-  const activeTab = ref('map')
+  const activeTab = ref("map")
 
   // 操作
   const setMonitoringPoints = (points: MonitoringPoint[]) => {
@@ -39,37 +45,24 @@ export const useMonitoringStore = defineStore('monitoring', () => {
   // 模拟数据加载（后续替换为真实API）
   const loadData = async () => {
     setLoading(true)
+    let url = "http://60.205.12.90:5012"
     try {
       // 模拟API延迟
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const [pointsRes] = await Promise.all([
+        axios.get(url + "/get_monitoring_info"),
+      ])
+      setMonitoringPoints(pointsRes.data)
 
       // 模拟监测点数据
-      const mockPoints: MonitoringPoint[] = [
-        {
-          id: '1',
-          name: '长江汉口段监测点',
-          location: '武汉市江岸区汉口江滩',
-          latitude: 30.5956,
-          longitude: 114.2847,
-          status: 'active',
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        },
-        {
-          id: '2',
-          name: '汉江河口监测点',
-          location: '武汉市硚口区汉江河口',
-          latitude: 30.5742,
-          longitude: 114.2486,
-          status: 'maintenance',
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        },
-      ]
+      setAlertData([])
+      setWorkOrders([])
 
-      const mockStatistics: StatisticsData = {
-        totalPoints: mockPoints.length,
-        activePoints: mockPoints.filter(p => p.status === 'active').length,
+      const pointStatistics: StatisticsData = {
+        totalPoints: monitoringPoints.value.length,
+        activePoints: monitoringPoints.value.filter(
+          (p) => p.status === "active"
+        ).length,
         alertCount: {
           normal: 8,
           warning: 3,
@@ -83,12 +76,9 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         },
       }
 
-      setMonitoringPoints(mockPoints)
-      setStatistics(mockStatistics)
-      setAlertData([])
-      setWorkOrders([])
+      setStatistics(pointStatistics)
     } catch (error) {
-      console.error('Failed to load data:', error)
+      console.error("Failed to load data:", error)
     } finally {
       setLoading(false)
     }

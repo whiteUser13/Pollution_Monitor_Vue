@@ -5,9 +5,13 @@ export interface MonitoringPoint {
   location: string
   latitude: number
   longitude: number
-  status: 'active' | 'inactive' | 'maintenance'
+  status: "active" | "inactive" | "maintenance"
   created_at: string
   updated_at: string
+  pollution_type: string
+  image_path: string
+  video_path: string
+  level: number
 }
 
 // 监测数据接口
@@ -21,7 +25,7 @@ export interface MonitoringData {
   conductivity?: number
   ammonia_nitrogen?: number
   cod?: number
-  alert_level: 'normal' | 'warning' | 'danger'
+  alert_level: "normal" | "warning" | "danger"
   recorded_at: string
   created_at: string
   monitoring_point?: MonitoringPoint
@@ -32,9 +36,9 @@ export interface WorkOrder {
   id: string
   title: string
   description?: string
-  type: 'pollution_incident' | 'maintenance' | 'inspection'
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  type: "pollution_incident" | "maintenance" | "inspection"
+  priority: "low" | "medium" | "high" | "urgent"
+  status: "pending" | "in_progress" | "completed" | "cancelled"
   point_id?: string
   assigned_to?: string
   created_by: string
@@ -46,14 +50,14 @@ export interface WorkOrder {
 
 // AI聊天消息接口
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system'
+  role: "user" | "assistant" | "system"
   content: string | ContentPart[]
   id?: string
 }
 
 export type ContentPart =
-  | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string } }
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
 
 // 统计数据接口
 export interface StatisticsData {
