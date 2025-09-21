@@ -22,6 +22,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "echarts": "^6.0.0",
+    "element-plus": "^2.11.3",
     "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
     "lightbox2": "^2.11.5",
