@@ -49,9 +49,16 @@ export const useMonitoringStore = defineStore("monitoring", () => {
     try {
       // 模拟API延迟
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      const [pointsRes] = await Promise.all([
-        axios.get(url + "/get_monitoring_info"),
-      ])
+      const [pointsRes, alertCountInfo, workOrderStatsInfo] = await Promise.all(
+        [
+          axios.get(url + "/get_monitoring_info"),
+          axios.get(url + "/get_point_level_stats"),
+          axios.get(url + "/get_order_status_stats"),
+        ]
+      )
+      console.log(alertCountInfo)
+      console.log(workOrderStatsInfo)
+
       setMonitoringPoints(pointsRes.data)
 
       // 模拟监测点数据
@@ -64,15 +71,15 @@ export const useMonitoringStore = defineStore("monitoring", () => {
           (p) => p.status === "active"
         ).length,
         alertCount: {
-          normal: 8,
-          warning: 3,
-          danger: 1,
+          normal: alertCountInfo.data.normal_count,
+          warning: alertCountInfo.data.warning_count,
+          danger: alertCountInfo.data.danger_count,
         },
         workOrderStats: {
-          pending: 6,
-          in_progress: 5,
-          completed: 15,
-          total: 26,
+          pending: workOrderStatsInfo.data.pending_count,
+          in_progress: workOrderStatsInfo.data.in_progress_count,
+          completed: workOrderStatsInfo.data.completed_count,
+          total: workOrderStatsInfo.data.total,
         },
       }
 
