@@ -16,7 +16,7 @@
               <el-option label="水质污染" value="水质污染" />
               <el-option label="大气污染" value="大气污染" />
               <el-option label="土壤污染" value="土壤污染" />
-              <el-option label="噪声污染" value="噪声污染" />
+              <el-option label="无污染" value="无污染" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -93,6 +93,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { api } from '@/utils/api'
 import type { CreateWorkOrderForm, MonitoringPoint } from './types'
 
@@ -204,9 +205,10 @@ const handleSubmit = async () => {
     loading.value = true
 
     // 提交工单数据
-    const response = await api.post('/create_work_order', createForm.value)
+    const response = await api.post('/add_workorders', createForm.value)
 
-    console.log('工单创建成功:', response.data)
+    // 显示成功消息
+    ElMessage.success(response.data.message || '工单创建成功')
 
     // 提交成功后关闭对话框并通知父组件
     visible.value = false
@@ -215,8 +217,12 @@ const handleSubmit = async () => {
     // 重置表单
     resetForm()
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建工单失败:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response.status, error.response.data)
+    }
+    ElMessage.error('创建工单失败: ' + (error.response?.data?.message || error.message || '未知错误'))
   } finally {
     loading.value = false
   }

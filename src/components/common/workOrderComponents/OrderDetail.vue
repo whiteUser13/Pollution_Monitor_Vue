@@ -15,6 +15,7 @@
               <el-option label="处理中" value="处理中" />
               <el-option label="已处理" value="已处理" />
               <el-option label="已完成" value="已完成" />
+              <el-option label="已驳回" value="已驳回" />
             </el-select>
             <el-input v-else :value="workOrder.status" readonly class="readonly-input" />
           </el-form-item>
@@ -45,7 +46,7 @@
               <el-option label="水质污染" value="水质污染" />
               <el-option label="大气污染" value="大气污染" />
               <el-option label="土壤污染" value="土壤污染" />
-              <el-option label="噪声污染" value="噪声污染" />
+              <el-option label="无污染" value="无污染" />
             </el-select>
             <el-input v-else :value="workOrder.type" readonly class="readonly-input" />
           </el-form-item>
@@ -105,9 +106,41 @@
         </el-col>
       </el-row>
 
-      <el-form-item label="图片路径" prop="image_path">
-        <el-input v-if="isEditing" v-model="editForm.image_path" placeholder="请输入污染图片路径" />
-        <el-input v-else :value="workOrder.image_path || '-'" readonly class="readonly-input" />
+      <el-form-item label="污染图片" prop="image_path">
+        <template v-if="isEditing">
+          <el-input v-model="editForm.image_path" placeholder="请输入污染图片路径" />
+          <!-- 编辑模式下预览图片 -->
+          <div v-if="editForm.image_path" class="mt-2">
+            <el-image :src="buildImageUrl(editForm.image_path)" :preview-src-list="[buildImageUrl(editForm.image_path)]"
+              fit="cover" style="width: 200px; height: 150px; border-radius: 4px;" :preview-teleported="true">
+              <template #error>
+                <div class="image-slot">
+                  <div>🖼️</div>
+                  <div>图片加载失败</div>
+                </div>
+              </template>
+            </el-image>
+          </div>
+        </template>
+        <template v-else>
+          <!-- 查看模式下显示图片 -->
+          <div v-if="workOrder.image_path" class="image-container">
+            <el-image :src="buildImageUrl(workOrder.image_path)"
+              :preview-src-list="[buildImageUrl(workOrder.image_path)]" fit="cover"
+              style="width: 200px; height: 150px; border-radius: 4px;" :preview-teleported="true">
+              <template #error>
+                <div class="image-slot">
+                  <div>🖼️</div>
+                  <div>图片加载失败</div>
+                </div>
+              </template>
+            </el-image>
+            <div class="image-path-text">{{ workOrder.image_path }}</div>
+          </div>
+          <div v-else class="no-image">
+            <span>🖼️ 暂无图片</span>
+          </div>
+        </template>
       </el-form-item>
 
       <el-form-item label="详细描述" prop="description">
@@ -119,15 +152,24 @@
     </el-form>
 
     <template #footer>
-      <div class="flex justify-end space-x-2">
-        <el-button @click="visible = false">关闭</el-button>
-        <template v-if="!isEditing">
-          <el-button type="primary" @click="handleEdit">编辑</el-button>
-        </template>
-        <template v-else>
-          <el-button @click="handleCancel">取消</el-button>
-          <el-button type="primary" :loading="loading" @click="handleSave">保存</el-button>
-        </template>
+      <div class="flex justify-between">
+        <!-- 左侧删除按钮 -->
+        <div>
+          <el-button type="danger" plain @click="handleDelete" :loading="deleteLoading">
+            删除工单
+          </el-button>
+        </div>
+        <!-- 右侧操作按钮 -->
+        <div class="flex space-x-2">
+          <el-button @click="visible = false">关闭</el-button>
+          <template v-if="!isEditing">
+            <el-button type="primary" @click="handleEdit">编辑</el-button>
+          </template>
+          <template v-else>
+            <el-button @click="handleCancel">取消</el-button>
+            <el-button type="primary" :loading="loading" @click="handleSave">保存</el-button>
+          </template>
+        </div>
       </div>
     </template>
   </el-dialog>
@@ -135,7 +177,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { api } from '@/utils/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { api, BASE_URL } from '@/utils/api'
 import type { WorkOrder, MonitoringPoint } from './types'
 
 // Props
@@ -149,12 +192,13 @@ const props = defineProps<Props>()
 // Events
 const emit = defineEmits<{
   'update:show': [value: boolean]
-  'success': []
+  'success': [updatedWorkOrder?: WorkOrder]
 }>()
 
 // 响应式数据
 const isEditing = ref(false)
 const loading = ref(false)
+const deleteLoading = ref(false)
 const formRef = ref()
 const monitoringPoints = ref<MonitoringPoint[]>([])
 
@@ -222,6 +266,16 @@ const getLevelText = (level: number | null) => {
   }
 }
 
+// 构建图片URL的辅助函数
+const buildImageUrl = (imagePath: string | null | undefined) => {
+  if (!imagePath) return ''
+  // 确保BASE_URL末尾有斜杠
+  const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/'
+  // 将反斜杠转换为正斜杠，并确保路径开头没有斜杠
+  const normalizedPath = imagePath.replace(/\\/g, '/').replace(/^\/+/, '')
+  return baseUrl + normalizedPath
+}
+
 const formatDateTime = (dateStr: string | null | undefined) => {
   if (!dateStr) return ''
   try {
@@ -257,19 +311,76 @@ const handleSave = async () => {
     await formRef.value?.validate()
     loading.value = true
 
-    // TODO: 调用更新工单API
-    console.log('更新工单数据:', editForm.value)
+    // 根据API文档，只发送可修改的字段
+    const updateData = {
+      description: editForm.value.description,
+      type: editForm.value.type,
+      assigned_to: editForm.value.assigned_to,
+      status: editForm.value.status,
+      level: typeof editForm.value.level === 'string' ? parseInt(editForm.value.level) : editForm.value.level,
+      pollutant: editForm.value.pollutant,
+      weather: editForm.value.weather
+    }
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = await api.put(`/update_order/${editForm.value.id}`, updateData)
 
+    ElMessage.success(response.data.message || '工单更新成功')
     isEditing.value = false
-    emit('success')
 
-  } catch (error) {
+    // 返回更新后的工单数据
+    const updatedWorkOrder = { ...editForm.value } as WorkOrder
+    emit('success', updatedWorkOrder)
+
+  } catch (error: any) {
     console.error('更新工单失败:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response.status, error.response.data)
+    }
+    ElMessage.error('更新工单失败: ' + (error.response?.data?.message || error.message || '未知错误'))
   } finally {
     loading.value = false
+  }
+}
+
+// 删除工单
+const handleDelete = async () => {
+  try {
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确定要删除工单 ID: ${props.workOrder?.id} 吗？此操作不可撤销。`,
+      '删除工单',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
+
+    deleteLoading.value = true
+
+    // 调用删除工单API
+    const response = await api.delete(`/delete_order/${props.workOrder?.id}`)
+
+    ElMessage.success(response.data.message || '工单删除成功')
+
+    // 关闭对话框并通知父组件刷新列表
+    visible.value = false
+    emit('success')
+
+  } catch (error: any) {
+    // 如果用户取消删除，不显示错误信息
+    if (error === 'cancel') {
+      return
+    }
+
+    console.error('删除工单失败:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response.status, error.response.data)
+    }
+    ElMessage.error('删除工单失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+  } finally {
+    deleteLoading.value = false
   }
 }
 </script>
@@ -296,5 +407,48 @@ const handleSave = async () => {
 .readonly-form :deep(.el-form-item__label) {
   color: #606266;
   font-weight: 500;
+}
+
+/* 图片相关样式 */
+.image-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-path-text {
+  font-size: 12px;
+  color: #909399;
+  background-color: #f5f7fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.image-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #f5f7fa;
+  color: #909399;
+  font-size: 14px;
+  gap: 4px;
+}
+
+.no-image {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.mt-2 {
+  margin-top: 8px;
 }
 </style>

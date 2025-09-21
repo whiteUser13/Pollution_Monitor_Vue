@@ -20,27 +20,35 @@
           <el-table :data="workOrders" stripe class="w-full" empty-text="暂无工单数据">
             <el-table-column prop="id" label="工单ID" width="80" />
             <el-table-column prop="monitoring_point_name" label="监测点" width="120" />
-            <el-table-column prop="monitoring_point_location" label="位置" min-width="180" />
+            <el-table-column prop="monitoring_point_location" label="位置" min-width="150" />
             <el-table-column prop="type" label="污染类型" width="110" />
             <el-table-column prop="pollutant" label="污染物" min-width="150" show-overflow-tooltip />
             <el-table-column prop="level" label="等级" width="80">
               <template #default="scope">
-                <el-tag :type="getLevelTagType(scope?.row?.level)" size="small" v-if="scope?.row">
+                <el-tag v-if="scope?.row && getLevelTagType(scope.row.level)" :type="getLevelTagType(scope.row.level)"
+                  size="small">
                   {{ getLevelText(scope.row.level) }}
                 </el-tag>
+                <span v-else-if="scope?.row" class="text-gray-500 text-sm">
+                  {{ getLevelText(scope.row.level) }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="90">
               <template #default="scope">
-                <el-tag :type="getStatusTagType(scope?.row?.status)" size="small" v-if="scope?.row">
+                <el-tag v-if="scope?.row && getStatusTagType(scope.row.status)"
+                  :type="getStatusTagType(scope.row.status)" size="small">
                   {{ scope.row.status }}
                 </el-tag>
+                <span v-else-if="scope?.row" class="text-gray-500 text-sm">
+                  {{ scope.row.status }}
+                </span>
               </template>
             </el-table-column>
-            <el-table-column label="详情" width="80" align="center">
+            <el-table-column label="操作" width="100" align="center">
               <template #default="scope">
                 <el-button type="primary" size="small" link @click="handleShowDetail(scope.row)" v-if="scope?.row">
-                  详情
+                  详情/编辑
                 </el-button>
               </template>
             </el-table-column>
@@ -117,33 +125,34 @@ const handlePageChange = (page: number) => {
 
 // 辅助函数
 const getLevelTagType = (level: number | null) => {
-  if (!level) return ''
+  if (!level) return 'info'
   switch (level) {
-    case 1: return 'info'
+    case 1: return 'success'
     case 2: return 'warning'
     case 3: return 'danger'
-    default: return ''
+    default: return 'info'
   }
 }
 
 const getLevelText = (level: number | null) => {
-  if (!level) return '未设置'
+  if (!level) return '未评估'
   switch (level) {
     case 1: return '轻微'
     case 2: return '中等'
     case 3: return '严重'
-    default: return '未知'
+    default: return '未评估'
   }
 }
 
 const getStatusTagType = (status: string | undefined) => {
-  if (!status) return ''
+  if (!status) return undefined
   switch (status) {
     case '待处理': return 'warning'
     case '处理中': return 'primary'
     case '已处理': return 'success'
     case '已完成': return 'success'
-    default: return ''
+    case '已驳回': return 'success'
+    default: return undefined
   }
 }
 

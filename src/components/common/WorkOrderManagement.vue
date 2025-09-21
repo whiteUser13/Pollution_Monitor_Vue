@@ -10,8 +10,7 @@
     <OrderDialog v-model:show="showCreateDialog" @success="handleCreateSuccess" />
 
     <!-- 工单详情对话框组件 -->
-    <OrderDetail v-model:show="showDetailDialog" :work-order="selectedWorkOrder"
-      @success="handleDetailEditSuccess" />
+    <OrderDetail v-model:show="showDetailDialog" :work-order="selectedWorkOrder" @success="handleDetailEditSuccess" />
   </div>
 </template>
 
@@ -46,9 +45,14 @@ const handleCreateSuccess = () => {
   orderOverviewRef.value?.refresh()
 }
 
-const handleDetailEditSuccess = () => {
+const handleDetailEditSuccess = (updatedWorkOrder?: WorkOrder) => {
   // 编辑成功后刷新工单列表和概览统计
   workOrderListRef.value?.refresh()
   orderOverviewRef.value?.refresh()
+
+  // 如果有更新后的工单数据，更新selectedWorkOrder
+  if (updatedWorkOrder) {
+    selectedWorkOrder.value = updatedWorkOrder
+  }
 }
 </script>
