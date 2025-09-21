@@ -60,3 +60,18 @@ export interface WorkOrderStats {
   completed: number
   total: number
 }
+
+// 工单状态统计API响应类型
+export interface OrderStatusStatsResponse {
+  total: number
+  pending_count: number
+  in_progress_count: number
+  completed_count: number
+}
+
+// 监测点状况统计API响应类型
+export interface PointLevelStatsResponse {
+  normal_count: number
+  warning_count: number
+  danger_count: number
+}

@@ -93,7 +93,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
 import type { CreateWorkOrderForm, MonitoringPoint } from './types'
 
 // Props
@@ -150,7 +150,7 @@ const formRules = {
 // 获取监测点数据
 const fetchMonitoringPoints = async () => {
   try {
-    const response = await axios.get('/get_monitoring_info')
+    const response = await api.get('/get_monitoring_info')
     monitoringPoints.value = response.data.map((point: any) => ({
       id: point.id,
       name: point.name,
@@ -201,18 +201,24 @@ const handleSubmit = async () => {
     // 表单验证
     await createFormRef.value?.validate()
 
-    // TODO: 实现表单提交逻辑
-    console.log('表单数据:', createForm.value)
-    console.log('表单验证通过，准备提交...')
+    loading.value = true
 
-    // 这里暂时只是打印表单数据，后续会实现真正的提交
-    // loading.value = true
+    // 提交工单数据
+    const response = await api.post('/create_work_order', createForm.value)
+
+    console.log('工单创建成功:', response.data)
+
     // 提交成功后关闭对话框并通知父组件
-    // visible.value = false
-    // emit('success')
+    visible.value = false
+    emit('success')
+
+    // 重置表单
+    resetForm()
 
   } catch (error) {
-    console.log('表单验证失败:', error)
+    console.error('创建工单失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 

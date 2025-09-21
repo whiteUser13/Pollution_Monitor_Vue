@@ -7,7 +7,7 @@
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <div class="grid grid-cols-4 gap-4">
+      <div v-loading="loading" class="grid grid-cols-4 gap-4">
         <!-- 待处理工单 -->
         <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
           <div class="flex items-center justify-between mb-2">
@@ -15,7 +15,7 @@
             <Clock class="h-4 w-4 text-orange-600" />
           </div>
           <div class="text-2xl font-bold text-orange-700">
-            {{ stats?.pending || 0 }}
+            {{ stats.pending }}
           </div>
           <div class="text-orange-600 text-xs mt-1">等待处理</div>
         </div>
@@ -27,7 +27,7 @@
             <Activity class="h-4 w-4 text-blue-600" />
           </div>
           <div class="text-2xl font-bold text-blue-700">
-            {{ stats?.in_progress || 0 }}
+            {{ stats.in_progress }}
           </div>
           <div class="text-blue-600 text-xs mt-1">正在处理</div>
         </div>
@@ -39,7 +39,7 @@
             <CheckCircle class="h-4 w-4 text-green-600" />
           </div>
           <div class="text-2xl font-bold text-green-700">
-            {{ stats?.completed || 0 }}
+            {{ stats.completed }}
           </div>
           <div class="text-green-600 text-xs mt-1">处理完成</div>
         </div>
@@ -51,7 +51,7 @@
             <FileText class="h-4 w-4 text-gray-600" />
           </div>
           <div class="text-2xl font-bold text-gray-700">
-            {{ stats?.total || 0 }}
+            {{ stats.total }}
           </div>
           <div class="text-gray-600 text-xs mt-1">工单总数</div>
         </div>
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 import {
   FileText,
@@ -68,12 +69,49 @@ import {
   Activity,
   CheckCircle,
 } from "lucide-vue-next"
-import type { WorkOrderStats } from './types'
+import { api } from '@/utils/api'
+import type { WorkOrderStats, OrderStatusStatsResponse } from './types'
 
-// Props
-interface Props {
-  stats?: WorkOrderStats
+// 响应式数据
+const stats = ref<WorkOrderStats>({
+  pending: 0,
+  in_progress: 0,
+  completed: 0,
+  total: 0
+})
+const loading = ref(false)
+
+// 获取工单状态统计
+const fetchOrderStats = async () => {
+  try {
+    loading.value = true
+    const response = await api.get<OrderStatusStatsResponse>('/get_order_status_stats')
+
+    // 转换API响应为组件需要的格式
+    stats.value = {
+      pending: response.data.pending_count,
+      in_progress: response.data.in_progress_count,
+      completed: response.data.completed_count,
+      total: response.data.total
+    }
+  } catch (error) {
+    console.error('获取工单统计数据失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
-defineProps<Props>()
+// 暴露刷新方法给父组件
+const refresh = () => {
+  fetchOrderStats()
+}
+
+defineExpose({
+  refresh
+})
+
+// 生命周期
+onMounted(() => {
+  fetchOrderStats()
+})
 </script>
