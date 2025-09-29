@@ -100,6 +100,30 @@
           <Send class="h-4 w-4" />
         </button>
       </form>
+       <!-- 生成报告按钮 -->
+      <div class="mt-3 flex justify-end">
+        <button
+          @click="generateReport"
+          class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+        >
+      📄 生成报告
+        </button>
+      </div>
+  <!-- 工单选择弹窗 -->
+      <div v-if="showWorkorderDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-96">
+          <h2 class="text-lg font-semibold mb-4">请选择工单</h2>
+          <select v-model="selectedOrderId" class="w-full border rounded p-2 mb-4">
+            <option v-for="order in workorders" :key="order.id" :value="order.id">
+              {{ order.monitoring_point_name }} - {{ order.monitoring_point_location }} (ID: {{ order.id }})
+            </option>
+          </select>
+          <div class="flex justify-end space-x-2">
+            <button @click="showWorkorderDialog = false" class="px-4 py-2 bg-gray-300 rounded">取消</button>
+            <button @click="confirmGenerateReport" class="px-4 py-2 bg-blue-600 text-white rounded">确认</button>
+          </div>
+        </div>
+      </div>
 
       <!-- 快捷操作 -->
       <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
@@ -133,6 +157,7 @@ import {
   Trash2,
   Download
 } from 'lucide-vue-next'
+import axios from 'axios'
 
 // 消息类型定义
 interface Message {
@@ -147,12 +172,23 @@ interface QuickQuestion {
   id: string
   text: string
 }
-
+interface WorkOrder {
+  id: number
+  monitoring_point_name: string
+  monitoring_point_location: string
+  type: string
+  status: string | null
+  created_at: string | null
+  // 其他字段可根据需要添加
+}
 // 响应式数据
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
 const isTyping = ref(false)
 const messagesContainer = ref<HTMLElement>()
+const showWorkorderDialog = ref(false)
+const workorders = ref<any[]>([])
+const selectedOrderId = ref<number | null>(null)
 
 // 快捷问题数据
 const quickQuestions: QuickQuestion[] = [
@@ -164,7 +200,79 @@ const quickQuestions: QuickQuestion[] = [
   { id: '6', text: '水质指标中哪些最关键？' }
 ]
 
-// 生成消息ID
+
+const fetchAllWorkorders = async () => {
+  try {
+    const res = await axios.get(' http://60.205.12.90:5012/get_all_workorders')
+    workorders.value = res.data
+  } catch (e) {
+    console.error('获取工单失败', e)
+  }
+}
+
+// 点击“生成报告”按钮
+const generateReport = async () => {
+  await fetchAllWorkorders()  // 从后端接口获取全部工单
+  showWorkorderDialog.value = true
+}
+
+const confirmGenerateReport = async () => {
+  // 1. 检查是否选择工单
+  if (!selectedOrderId.value) {
+    alert("请先选择工单！");
+    return;
+  }
+
+  // 保存当前工单ID
+  const orderId = selectedOrderId.value;
+
+  // 2. 立即关闭弹窗
+  showWorkorderDialog.value = false;
+
+  // 3. 插入用户消息
+  const userMsg: Message = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    role: 'user',
+    content: `请帮我根据ID为 ${orderId} 的工单生成报告`,
+    timestamp: new Date(),
+  };
+  messages.value.push(userMsg);
+
+  // 4. 插入 AI 响应占位消息
+  isTyping.value = true;
+  const assistantMsg: Message = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    role: 'assistant',
+    content: '',
+    timestamp: new Date(),
+  };
+  messages.value.push(assistantMsg);
+
+  try {
+    // 5. 异步调用后端接口生成报告
+    const res = await axios.post(`http://60.205.12.90:6080/generate_report?order_id=${orderId}`);
+
+    // 6. 判断返回结果
+    if (res.data.report) {
+      assistantMsg.content = res.data.report;
+    } else if (res.data.error) {
+      assistantMsg.content = `❌ 报告生成失败: ${res.data.error}`;
+    } else {
+      assistantMsg.content = '❌ 未收到报告，请稍后再试。';
+    }
+  } catch (err) {
+    assistantMsg.content = '❌ 报告生成失败，请稍后再试。';
+    console.error("生成报告请求失败:", err);
+  } finally {
+    isTyping.value = false;
+    await nextTick();
+    scrollToBottom();
+  }
+
+  console.log('Selected Order ID:', orderId);
+};
+
+ 
 const generateMessageId = (): string => {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
@@ -183,12 +291,11 @@ const sendMessage = async () => {
   messages.value.push(userMessage)
   const question = inputMessage.value.trim()
   inputMessage.value = ''
-
+  
   // 滚动到底部
   await nextTick()
   scrollToBottom()
 
-  // 模拟AI回复
   await simulateAIResponse(question)
 }
 
@@ -206,80 +313,46 @@ const handleQuickQuestion = async (question: string) => {
   await nextTick()
   scrollToBottom()
 
-  // 模拟AI回复
   await simulateAIResponse(question)
 }
 
-// 模拟AI响应（临时实现，后续可替换为真实API）
 const simulateAIResponse = async (question: string) => {
-  isTyping.value = true
+  isTyping.value = true;
 
-  // 模拟思考时间
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  try {
+    const response = await fetch('http://60.205.12.90:6080/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }) // 保证和后端一致
+    });
 
-  // 模拟响应内容
-  let response = ''
+    if (!response.ok) throw new Error('API请求失败');
 
-  if (question.includes('pH值') || question.includes('pH')) {
-    response = `
-      <p><strong>pH值对河流生态的影响分析：</strong></p>
-      <ul>
-        <li>• <strong>正常范围</strong>：河流pH值通常应保持在6.5-8.5之间</li>
-        <li>• <strong>酸性影响</strong>：pH值过低会影响鱼类呼吸，破坏食物链</li>
-        <li>• <strong>碱性影响</strong>：pH值过高会降低溶氧量，影响水生生物</li>
-        <li>• <strong>监测建议</strong>：建议每4小时监测一次，异常时加密监测</li>
-      </ul>
-      <p>当前系统中有 <span class="text-blue-600 font-medium">3个监测点</span> 的pH值需要关注。</p>
-    `
-  } else if (question.includes('区域') || question.includes('困难')) {
-    response = `
-      <p><strong>监测困难区域分析：</strong></p>
-      <ul>
-        <li>• <strong>工业密集区</strong>：污染源复杂，干扰因素多</li>
-        <li>• <strong>山区河段</strong>：地形复杂，设备维护困难</li>
-        <li>• <strong>城市河段</strong>：人为干扰较多，数据波动大</li>
-        <li>• <strong>建议方案</strong>：增加移动监测设备，提高监测频次</li>
-      </ul>
-      <p>建议重点关注 <span class="text-orange-600 font-medium">工业园区下游</span> 的监测点。</p>
-    `
-  } else if (question.includes('趋势') || question.includes('预测')) {
-    response = `
-      <p><strong>水质趋势分析与预测方法：</strong></p>
-      <ul>
-        <li>• <strong>历史数据分析</strong>：分析7-30天的数据变化趋势</li>
-        <li>• <strong>季节性规律</strong>：考虑降雨、温度等季节因素</li>
-        <li>• <strong>机器学习</strong>：使用LSTM模型进行时间序列预测</li>
-        <li>• <strong>预警机制</strong>：设置多级预警阈值</li>
-      </ul>
-      <p>当前预测显示 <span class="text-blue-600 font-medium">下游2号点位</span> 在未来24小时内可能出现轻微污染。</p>
-    `
-  } else {
-    response = `
-      <p>感谢您的提问！基于当前河流污染监测系统的数据，我为您提供以下分析：</p>
-      <ul>
-        <li>• 系统正在实时监控 <span class="text-blue-600 font-medium">12个监测点位</span></li>
-        <li>• 当前水质整体状况良好，有 <span class="text-orange-600 font-medium">2个点位</span> 需要关注</li>
-        <li>• 建议查看详细的监测数据和历史趋势图</li>
-      </ul>
-      <p>如需更具体的分析，请提供更详细的问题描述。</p>
-    `
+    const data = await response.json();
+
+    // ⚡ 确认后端字段名，可能是 data.reply 或 data.answer
+    const aiResponse = data.reply || data.answer || '抱歉，未能获取到有效的回答。';
+
+    messages.value.push({
+      id: generateMessageId(),
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: new Date()
+    });
+  } catch (error) {
+    messages.value.push({
+      id: generateMessageId(),
+      role: 'assistant',
+      content: '❌ 系统暂时无法回答，请检查后端是否启动。',
+      timestamp: new Date()
+    });
+  } finally {
+    isTyping.value = false;
+    await nextTick();
+    scrollToBottom();
   }
+};
 
-  const aiMessage: Message = {
-    id: generateMessageId(),
-    role: 'assistant',
-    content: response,
-    timestamp: new Date()
-  }
-
-  messages.value.push(aiMessage)
-  isTyping.value = false
-
-  await nextTick()
-  scrollToBottom()
-}
-
-// 滚动到底部
 const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
