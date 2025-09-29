@@ -9,7 +9,7 @@
             <Droplets class="h-5 w-5 text-white" />
           </div>
           <h1 class="text-xl font-bold text-gray-900">
-            智能河流污染实时监测系统
+            智能河流污染监测与智能报告生成平台
           </h1>
           <div class="text-sm text-gray-500">实时监控 智能分析 科学决策</div>
         </div>
