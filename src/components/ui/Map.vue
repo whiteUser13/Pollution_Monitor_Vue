@@ -12,7 +12,7 @@
 
 <script setup>
 import { cn } from "@/lib/utils"
-import { onMounted, ref, watch } from "vue"
+import { onMounted, ref, watch, defineEmits } from "vue"
 import L from "leaflet"
 import "@/utils/geoAnimation/L.Icon.Pulse.js"
 import { KqMapView } from "@kq_npm/client_leaflet_vue"
@@ -22,6 +22,9 @@ const props = defineProps({
   center: Object,
   points: Array,
 })
+
+// 定义事件（父组件会监听这个事件）
+const emit = defineEmits(["markerSelected"])
 watch(
   () => props.points,
   (newVal) => {
@@ -63,7 +66,7 @@ const initMap = () => {
   map = L.map("map", {
     attributionControl: true,
     center: [props.center.lat, props.center.lng],
-    zoom: 12,
+    zoom: 10,
   })
   //控制地图底图
   var baseLayers = {
@@ -139,15 +142,20 @@ function generateMarker(
   let lat = latlng[0]
   let lng = latlng[1]
   let pulsingIcon = L.icon.pulse({
-    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    iconSize: [16, 16],
     color: markerColor,
     fillColor: markerColor,
     animate: true, // 是否动画
-    heartbeat: 1, // 动画周期，单位秒
+    heartbeat: 1.5, // 动画周期，单位秒
   })
   let marker = L.marker([lat, lng], {
     icon: pulsingIcon,
     id: markerId,
+  })
+  // 绑定点击事件
+  marker.on("click", (e) => {
+    emit("markerSelected", e.target.options.id)
   })
   const keys = Object.keys(infoObj)
   let infoContent = `<div><strong style="color:${titleColor};">${title}</strong><br>`
