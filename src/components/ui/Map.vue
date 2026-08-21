@@ -16,7 +16,8 @@ import { onMounted, ref, watch, defineEmits } from "vue"
 import L from "leaflet"
 import "@/utils/geoAnimation/L.Icon.Pulse.js"
 // import { KqMapView } from "@kq_npm/client_leaflet_vue"
-
+import * as turf from "@turf/turf"
+import { BASE_URL } from "@/utils/api"
 const props = defineProps({
   class: String,
   center: Object,
@@ -28,19 +29,14 @@ const emit = defineEmits(["markerSelected"])
 watch(
   () => props.points,
   (newVal) => {
-    removeLegend()
-    removeMarkers()
-    const grades = ["无污染", "轻微污染", "较为严重", "严重污染"] // 可对应绿、黄、红
-    const colors = ["green", "yellow", "orange", "red"]
-    addLegend(colors, grades, map)
-    addMakerLayer(newVal, grades, colors)
+    refreshPointLayers(newVal)
   },
   { deep: true },
 )
 watch(
   () => props.center,
   (newVal) => {
-    if (map) {
+    if (map && markerLayer) {
       const marker = findMarkerById(newVal.id)
       if (marker) {
         marker.openPopup() // 打开 popup
@@ -57,8 +53,13 @@ watch(
 let map = null
 let markerLayer = null
 let legend = null
+let bufferLayer = null
+let bufferLabelLayer = null
+const bufferLabelMinZoom = 15
+const grades = ["无污染", "轻微污染", "较为严重", "严重污染"] // 可对应绿、黄、红
+const colors = ["green", "yellow", "orange", "red"]
 // window.showImage = showImage
-const url = "http://60.205.12.90:5012/"
+const url = `${BASE_URL}/`
 onMounted(() => {
   initMap()
 })
@@ -119,15 +120,21 @@ const initMap = () => {
   }
   // 创建图例控件
   L.control.layers(baseLayers, {}, { position: "topright" }).addTo(map)
+  bufferLayer = L.geoJSON(null, {
+    style: {
+      color: "#2563eb",
+      weight: 2,
+      opacity: 0.85,
+      fillColor: "#60a5fa",
+      fillOpacity: 0.22,
+    },
+    interactive: false,
+  }).addTo(map)
+  bufferLabelLayer = L.layerGroup()
   //添加marker图层
   markerLayer = L.layerGroup().addTo(map)
-  if (props.points) {
-    removeMarkers()
-    const grades = ["无污染", "轻微污染", "较为严重", "严重污染"] // 可对应绿、黄、红
-    const colors = ["green", "yellow", "orange", "red"]
-    addLegend(colors, grades, map)
-    addMakerLayer(props.points, grades, colors)
-  }
+  map.on("zoomend", updateBufferLabelVisibility)
+  refreshPointLayers(props.points)
 }
 
 function generateMarker(
@@ -141,6 +148,7 @@ function generateMarker(
 ) {
   let lat = latlng[0]
   let lng = latlng[1]
+
   let pulsingIcon = L.icon.pulse({
     iconAnchor: [10, 10],
     iconSize: [16, 16],
@@ -207,7 +215,7 @@ const addLegend = (colorArr, textArr, toMap) => {
 const addMakerLayer = (points, grades, colors) => {
   console.log("addmarkerLayer")
 
-  points.forEach((el) => {
+  normalizePoints(points).forEach((el) => {
     let pointInfo = {
       监测点名称: el.name,
       位置: el.location,
@@ -231,6 +239,83 @@ const addMakerLayer = (points, grades, colors) => {
     markerLayer.addLayer(marker)
   })
 }
+const refreshPointLayers = (points) => {
+  if (!map || !markerLayer || !bufferLayer || !bufferLabelLayer) return
+
+  removeLegend()
+  removeMarkers()
+  removeBufferLayer()
+  removeBufferLabels()
+
+  if (!Array.isArray(points) || points.length === 0) return
+
+  addLegend(colors, grades, map)
+  addBufferLayer(points, 50) // 添加缓冲区图层，缓冲区半径为50米
+  addBufferLabels(points, 50)
+  addMakerLayer(points, grades, colors)
+  updateBufferLabelVisibility()
+}
+const normalizePoints = (points) => {
+  if (!Array.isArray(points)) return []
+
+  return points
+    .map((point) => ({
+      ...point,
+      latitude: Number(point.latitude),
+      longitude: Number(point.longitude),
+    }))
+    .filter(
+      (point) =>
+        Number.isFinite(point.latitude) && Number.isFinite(point.longitude),
+    )
+}
+const addBufferLayer = (points, bufferDistance = 50) => {
+  const bufferFeatures = normalizePoints(points)
+    .map((point) => {
+      const pt = turf.point([point.longitude, point.latitude])
+      return turf.buffer(pt, bufferDistance, { units: "meters", steps: 64 })
+    })
+    .filter(Boolean)
+
+  if (bufferFeatures.length === 0) return
+
+  const bufferCollection = turf.featureCollection(bufferFeatures)
+  bufferLayer.clearLayers()
+  bufferLayer.addData(bufferCollection)
+}
+const addBufferLabels = (points, bufferDistance = 50) => {
+  normalizePoints(points).forEach((point) => {
+    const pt = turf.point([point.longitude, point.latitude])
+    const labelPoint = turf.destination(pt, bufferDistance * 0.7, 0, {
+      units: "meters",
+    })
+    const [lng, lat] = labelPoint.geometry.coordinates
+    const label = L.marker([lat, lng], {
+      interactive: false,
+      icon: L.divIcon({
+        className: "ai-buffer-label-icon",
+        html: '<span class="ai-buffer-label">AI预测污染区域</span>',
+        iconAnchor: [48, 8],
+      }),
+    })
+
+    bufferLabelLayer.addLayer(label)
+  })
+}
+const updateBufferLabelVisibility = () => {
+  if (!map || !bufferLabelLayer) return
+
+  if (map.getZoom() >= bufferLabelMinZoom) {
+    if (!map.hasLayer(bufferLabelLayer)) {
+      bufferLabelLayer.addTo(map)
+    }
+    return
+  }
+
+  if (map.hasLayer(bufferLabelLayer)) {
+    map.removeLayer(bufferLabelLayer)
+  }
+}
 const getStatusStr = (status) => {
   switch (status) {
     case "active":
@@ -244,6 +329,7 @@ const getStatusStr = (status) => {
   }
 }
 const removeMarkers = () => {
+  if (!markerLayer) return
   markerLayer.clearLayers() // 清空整个 layerGroup
 }
 const findMarkerById = (id) => {
@@ -261,6 +347,14 @@ const removeLegend = () => {
     legend = null
   }
 }
+const removeBufferLayer = () => {
+  if (!bufferLayer) return
+  bufferLayer.clearLayers()
+}
+const removeBufferLabels = () => {
+  if (!bufferLabelLayer) return
+  bufferLabelLayer.clearLayers()
+}
 </script>
 <style scoped>
 #map {
@@ -269,5 +363,24 @@ const removeLegend = () => {
   height: 100%;
 
   background-color: gray;
+}
+
+:deep(.ai-buffer-label-icon) {
+  pointer-events: none;
+}
+
+:deep(.ai-buffer-label) {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.82);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.24);
+  pointer-events: none;
+  white-space: nowrap;
 }
 </style>

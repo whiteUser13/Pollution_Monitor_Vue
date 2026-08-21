@@ -36,6 +36,7 @@ pnpm build
 
 <img src="./imgs/1.png"/>
 <img src="./imgs/2.png"/>
+<img src="./imgs/7.png"/>
 <img src="./imgs/3.jpg"/>
 <img src="./imgs/4.jpg"/>
 <img src="./imgs/5.jpg"/>

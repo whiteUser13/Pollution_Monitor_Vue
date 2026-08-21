@@ -1,8 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
 
 // 基础URL配置
-const BASE_URL = "http://60.205.12.90:5012"
-// const BASE_URL = "http://127.0.0.1:5012"
+const BASE_URL = "http://127.0.0.1:5012"
 const LLM_BASE_URL = "http://127.0.0.1:6080"
 
 // 创建axios实例
