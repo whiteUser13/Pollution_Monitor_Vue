@@ -286,9 +286,14 @@ const addBufferLayer = (points, bufferDistance = 50) => {
 const addBufferLabels = (points, bufferDistance = 50) => {
   normalizePoints(points).forEach((point) => {
     const pt = turf.point([point.longitude, point.latitude])
-    const labelPoint = turf.destination(pt, bufferDistance * 0.7, 0, {
-      units: "meters",
-    })
+    const labelPoint = turf.destination(
+      pt,
+      point.buffer_distance ? point.buffer_distance : 0,
+      0,
+      {
+        units: "meters",
+      },
+    )
     const [lng, lat] = labelPoint.geometry.coordinates
     const label = L.marker([lat, lng], {
       interactive: false,
