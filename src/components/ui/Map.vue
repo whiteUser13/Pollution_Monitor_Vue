@@ -4,7 +4,7 @@
     :class="
       cn(
         'bg-gray-100 rounded-lg flex items-center justify-center text-gray-500',
-        $attrs.class
+        $attrs.class,
       )
     "
     v-bind="$attrs"></div>
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { onMounted, ref, watch, defineEmits } from "vue"
 import L from "leaflet"
 import "@/utils/geoAnimation/L.Icon.Pulse.js"
-import { KqMapView } from "@kq_npm/client_leaflet_vue"
+// import { KqMapView } from "@kq_npm/client_leaflet_vue"
 
 const props = defineProps({
   class: String,
@@ -35,7 +35,7 @@ watch(
     addLegend(colors, grades, map)
     addMakerLayer(newVal, grades, colors)
   },
-  { deep: true }
+  { deep: true },
 )
 watch(
   () => props.center,
@@ -51,7 +51,7 @@ watch(
       }
     }
   },
-  { deep: true }
+  { deep: true },
 )
 // vue3用了ref来定义leaflet的接收值，控制台会报错,不要使用.value复制
 let map = null
@@ -74,45 +74,45 @@ const initMap = () => {
     天地图: L.layerGroup([
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
     ]).addTo(map),
     天地图影像: L.layerGroup([
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
     ]),
     天地图地形: L.layerGroup([
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ter&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
       L.tileLayer(
         "http://t{s}.tianditu.gov.cn/cta_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cta&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=56b81006f361f6406d0e940d2f89a39c",
-        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] }
+        { subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"] },
       ),
     ]),
     高德地图: L.tileLayer(
       "http://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
-      { subdomains: "1234" }
+      { subdomains: "1234" },
     ),
     高德影像: L.layerGroup([
       L.tileLayer(
         "http://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
-        { subdomains: "1234" }
+        { subdomains: "1234" },
       ),
       L.tileLayer(
         "http://webst0{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8",
-        { subdomains: "1234" }
+        { subdomains: "1234" },
       ),
     ]),
     OSM: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
@@ -137,7 +137,7 @@ function generateMarker(
   markerId,
   title,
   titleColor = "red",
-  markerColor = "red"
+  markerColor = "red",
 ) {
   let lat = latlng[0]
   let lng = latlng[1]
@@ -224,7 +224,7 @@ const addMakerLayer = (points, grades, colors) => {
       el.id,
       "监测点信息",
       "red",
-      colors[el.level]
+      colors[el.level],
     )
     console.log("添加点")
 

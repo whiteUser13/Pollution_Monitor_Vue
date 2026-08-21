@@ -7,6 +7,7 @@ import type {
   StatisticsData,
 } from "@/types/types"
 import axios from "axios"
+import { BASE_URL } from "@/utils/api"
 
 export const useMonitoringStore = defineStore("monitoring", () => {
   // 状态
@@ -45,7 +46,7 @@ export const useMonitoringStore = defineStore("monitoring", () => {
   // 模拟数据加载（后续替换为真实API）
   const loadData = async () => {
     setLoading(true)
-    let url = "http://60.205.12.90:5012"
+    let url = BASE_URL
     try {
       // 模拟API延迟
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -54,7 +55,7 @@ export const useMonitoringStore = defineStore("monitoring", () => {
           axios.get(url + "/get_monitoring_info"),
           axios.get(url + "/get_point_level_stats"),
           axios.get(url + "/get_order_status_stats"),
-        ]
+        ],
       )
       console.log(alertCountInfo)
       console.log(workOrderStatsInfo)
@@ -68,7 +69,7 @@ export const useMonitoringStore = defineStore("monitoring", () => {
       const pointStatistics: StatisticsData = {
         totalPoints: monitoringPoints.value.length,
         activePoints: monitoringPoints.value.filter(
-          (p) => p.status === "active"
+          (p) => p.status === "active",
         ).length,
         alertCount: {
           normal: alertCountInfo.data.normal_count,

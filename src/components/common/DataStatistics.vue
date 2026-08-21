@@ -538,7 +538,7 @@ const processWorkOrderStats = (workOrders: WorkOrder[]) => {
 
   // 转换为数组并排序
   const sortedPollutants = Array.from(pollutantMap.entries()).sort(
-    (a, b) => b[1] - a[1]
+    (a, b) => b[1] - a[1],
   )
 
   pollutantData.value.categories = sortedPollutants.map(([name]) => name)
@@ -564,7 +564,7 @@ const processWorkOrderStats = (workOrders: WorkOrder[]) => {
     if (order.monitoring_point_location) {
       locationMap.set(
         order.monitoring_point_location,
-        (locationMap.get(order.monitoring_point_location) || 0) + 1
+        (locationMap.get(order.monitoring_point_location) || 0) + 1,
       )
     }
   })
@@ -1094,7 +1094,7 @@ watch(
   () => {
     updateChartData()
   },
-  { deep: true }
+  { deep: true },
 )
 
 // 组件挂载

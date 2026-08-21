@@ -117,6 +117,7 @@ import {
   CheckCircle,
 } from "lucide-vue-next"
 import { Map } from "@/components/ui"
+import { BASE_URL } from "@/utils/api"
 
 onMounted(() => {
   videoRef.value.loop = true
@@ -142,7 +143,7 @@ let markers = null
 let videoSrc = ref("")
 // 响应式变量
 const selectedPoint = ref(null)
-const mapCenter = ref({ lat: 30.5928, lng: 114.3055 }) // 武汉市中心
+const mapCenter = ref({ lat: 39.91402, lng: 116.403197 }) // 武汉市中心
 
 // 方法
 
@@ -153,7 +154,7 @@ const handlePointClick = (point) => {
     lat: Number(point.latitude),
     lng: Number(point.longitude),
   }
-  videoSrc.value = "http://60.205.12.90:5012/" + point.video_path
+  videoSrc.value = BASE_URL + "/" + point.video_path
   if (props.onPointSelect) {
     props.onPointSelect(point)
   }
@@ -162,7 +163,7 @@ const handlePointClick = (point) => {
 }
 const handleMarkerSelected = (poi_id) => {
   const point = props.monitoringPoints.find((p) => p.id === poi_id)
-  videoSrc.value = "http://60.205.12.90:5012/" + point.video_path
+  videoSrc.value = BASE_URL + "/" + point.video_path
 }
 const getStatusColor = (status) => {
   switch (status) {
